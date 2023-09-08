@@ -1,5 +1,27 @@
 const todos = [];
 const RENDER_EVENT = "render-todo";
+const SAVED_EVENT = "saved-todo";
+const STORAGE_KEY = "TODO_APPS";
+
+function isStorageExist() {
+	if (typeof Storage === undefined) {
+		alert("Browser Kamu Tidak Mendukung Web Storage");
+		return false;
+	}
+	return true;
+}
+
+function loadDataFromStorage() {
+	const serializedData = localStorage.getItem(STORAGE_KEY);
+	const data = JSON.parse(serializedData);
+
+	if (data !== null) {
+		for (const todo of data) {
+			todos.push(todo);
+		}
+	}
+	document.dispatchEvent(new Event(RENDER_EVENT));
+}
 
 document.addEventListener("DOMContentLoaded", function () {
 	const submitForm = document.getElementById("form");
@@ -7,30 +29,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		event.preventDefault();
 		addTodo();
 	});
-
-	function addTodo() {
-		const textTodo = document.getElementById("title").value;
-		const timeStamp = document.getElementById("date").value;
-
-		const generatedID = generateID();
-		const todoObject = generateTodoObject(generatedID, textTodo, timeStamp, false);
-		todos.push(todoObject);
-
-		function generateID() {
-			return +new Date();
-		}
-
-		function generateTodoObject(id, task, timestamp, isCompleted) {
-			return {
-				id,
-				task,
-				timestamp,
-				isCompleted,
-			};
-		}
-
-		document.dispatchEvent(new Event(RENDER_EVENT));
-	}
 
 	function makeTodo(todoObject) {
 		const textTitle = document.createElement("h2");
@@ -95,12 +93,38 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	}
 
+	function addTodo() {
+		const textTodo = document.getElementById("title").value;
+		const timeStamp = document.getElementById("date").value;
+
+		const generatedID = generateID();
+		const todoObject = generateTodoObject(generatedID, textTodo, timeStamp, false);
+		todos.push(todoObject);
+
+		function generateID() {
+			return +new Date();
+		}
+
+		function generateTodoObject(id, task, timestamp, isCompleted) {
+			return {
+				id,
+				task,
+				timestamp,
+				isCompleted,
+			};
+		}
+
+		document.dispatchEvent(new Event(RENDER_EVENT));
+		saveData();
+	}
+
 	function addTaskToCompleted(todoId) {
 		const todoTarget = findTodo(todoId);
 
 		if (todoTarget == null) return;
 		todoTarget.isCompleted = true;
 		document.dispatchEvent(new Event(RENDER_EVENT));
+		saveData();
 	}
 
 	function removeTaskFromCompleted(todoId) {
@@ -108,6 +132,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (todoTarget === -1) return;
 		todos.splice(todoTarget, 1);
 		document.dispatchEvent(new Event(RENDER_EVENT));
+		saveData();
 	}
 
 	function undoTaskFromCompleted(todoId) {
@@ -115,6 +140,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (todoTarget == null) return;
 		todoTarget.isCompleted = false;
 		document.dispatchEvent(new Event(RENDER_EVENT));
+		saveData();
 	}
 
 	document.addEventListener(RENDER_EVENT, function () {
@@ -134,4 +160,20 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		}
 	});
+
+	function saveData() {
+		if (isStorageExist()) {
+			const parsed = JSON.stringify(todos);
+			localStorage.setItem(STORAGE_KEY, parsed);
+			document.dispatchEvent(new Event(SAVED_EVENT));
+		}
+	}
+
+	document.addEventListener(SAVED_EVENT, function () {
+		console.log(localStorage.getItem(STORAGE_KEY));
+	});
+
+	if (isStorageExist()) {
+		loadDataFromStorage();
+	}
 });
